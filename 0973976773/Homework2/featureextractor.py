@@ -1,0 +1,238 @@
+from nltk.compat import python_2_unicode_compatible
+import nltk
+printed = False
+
+@python_2_unicode_compatible
+class FeatureExtractor(object):
+    @staticmethod
+    def _check_informative(feat, underscore_is_informative=False):
+        """
+        Check whether a feature is informative
+        """
+
+        if feat is None:
+            return False
+
+        if feat == '':
+            return False
+
+        if not underscore_is_informative and feat == '_':
+            return False
+
+        return True
+
+    @staticmethod
+    def find_left_right_dependencies(idx, arcs):
+        left_most = 1000000
+        right_most = -1
+        dep_left_most = ''
+        dep_right_most = ''
+        for (wi, r, wj) in arcs:
+            if wi == idx:
+                if (wj > wi) and (wj > right_most):
+                    right_most = wj
+                    dep_right_most = r
+                if (wj < wi) and (wj < left_most):
+                    left_most = wj
+                    dep_left_most = r
+        return dep_left_most, dep_right_most
+
+    @staticmethod
+    def extract_features(tokens, buffer, stack, arcs):
+        """
+        This function returns a list of string features for the classifier
+
+        :param tokens: nodes in the dependency graph
+        :param stack: partially processed words
+        :param buffer: remaining input words
+        :param arcs: partially built dependency tree
+
+        :return: list(str)
+        """
+
+        """
+        Think of some of your own features here! Some standard features are
+        described in Table 3.2 on page 31 of Dependency Parsing by Kubler,
+        McDonald, and Nivre
+
+        [http://books.google.com/books/about/Dependency_Parsing.html?id=k3iiup7HB9UC]
+        """
+
+        result = []
+
+
+        global printed
+        if not printed:
+            #print("This is not a very good feature extractor!")
+            printed = True
+
+	#if stack and buffer:
+	#    stack_idx0 = stack[-1]
+	#    stack_token = tokens[stack_idx0]
+	#    buffer_idx0 = buffer[0]
+	#    buffer_token = tokens[buffer_idx0]
+
+	#    result.append('STK_0_BUF_0_DIST_' + str(abs(stack_idx0 - buffer_idx0)))
+
+	#    count = 0
+	#    for i in xrange(stack_idx0, buffer_idx0):
+	#	if tokens[i]['ctag'] == 'VERB':
+	#	    count += 1
+	#    result.append('STK_0_BUF_O_NUMVERBS_' + str(count))
+        # an example set of features:
+        if stack:
+            stack_idx0 = stack[-1]
+            token = tokens[stack_idx0]
+	    #print "line 86"
+	    #print token
+	    if FeatureExtractor._check_informative(token['word'], True):
+                result.append('STK_0_FORM_' + token['word'])
+
+            if 'feats' in token and FeatureExtractor._check_informative(token['feats']):
+                feats = token['feats'].split("|")
+                for feat in feats:
+                    result.append('STK_0_FEATS_' + feat)
+
+            # Left most, right most dependency of stack[0]
+            dep_left_most, dep_right_most = FeatureExtractor.find_left_right_dependencies(stack_idx0, arcs)
+
+            if FeatureExtractor._check_informative(dep_left_most):
+                result.append('STK_0_LDEP_' + dep_left_most)
+            if FeatureExtractor._check_informative(dep_right_most):
+                result.append('STK_0_RDEP_' + dep_right_most)
+
+	    #STK[0] LEMMA
+	    if 'lemma' in token and FeatureExtractor._check_informative(token['lemma']):
+		result.append('STK_0_LEMMA_' + token['lemma'])
+	
+	    #STK[0] POSTAG
+	    if 'ctag' in token:
+		if FeatureExtractor._check_informative(token['ctag']):
+		    result.append('STK_0_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+	    if 'tag' in token:
+		if FeatureExtractor._check_informative(token['tag']):
+		    result.append('STK_0_TAG_' + token['tag'])
+
+	    #STK[0] L/R CHILD
+	   # print token
+	    children = None
+	    if 'deps' in token:
+		children = token['deps']
+	    if children is not None:
+		index = None
+		if 'address' in token:
+		    index = token['address']
+		if index is not None:
+		    left_children = sum(1 for c in children if c < index)
+		    right_children = sum(1 for c in children if c > index)
+		    result.append('STK_0_LCHILDREN_' + str(left_children))
+		    result.append('STK_0_RCHILDREN_' + str(right_children))
+	    #lchildren = 0
+	    #rchildren = 0
+	    #token = stack[-1]
+	    #for arc in arcs:
+		#if tokens[arc[0]] == token:
+		    #if tokens[arc[2]['address'] > token['address']]:
+			#rchildren += 1
+		    #else:
+			#lchildren += 1
+	    
+	    #result.append('STK_0_LCHILDREN_' + str(lchildren))
+            #result.append('STK_0_RCHILDREN_' + str(rchildren))
+
+	    #STK[1] POSTAG
+	    if len(stack) > 1:
+		stack_idx1 = stack[-2]
+		token = tokens[stack_idx1]
+		if 'ctag' in token :
+		    if FeatureExtractor._check_informative('ctag'):
+			result.append('STK_1_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+		if 'tag' in token:
+		    if FeatureExtractor._check_informative(token['tag']):
+			result.append('STK_1_TAG_' + token['tag'])
+
+	    
+        if buffer:
+            buffer_idx0 = buffer[0]
+            token = tokens[buffer_idx0]
+            if FeatureExtractor._check_informative(token['word'], True):
+                result.append('BUF_0_FORM_' + token['word'])
+
+            if 'feats' in token and FeatureExtractor._check_informative(token['feats']):
+                feats = token['feats'].split("|")
+                for feat in feats:
+                    result.append('BUF_0_FEATS_' + feat)
+
+            dep_left_most, dep_right_most = FeatureExtractor.find_left_right_dependencies(buffer_idx0, arcs)
+
+            if FeatureExtractor._check_informative(dep_left_most):
+                result.append('BUF_0_LDEP_' + dep_left_most)
+            if FeatureExtractor._check_informative(dep_right_most):
+                result.append('BUF_0_RDEP_' + dep_right_most)
+
+            #BUF[0] LEMMA
+	    if 'lemma' in token:
+		if FeatureExtractor._check_informative(token['lemma']):
+		    result.append('BUF_0_LEMMA_' + token['lemma'])
+	    
+	    #BUF[0] POSTAG
+	    if 'ctag' in token: 
+		if FeatureExtractor._check_informative(token['ctag']):
+		    result.append('BUF_0_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+	    if 'tag' in token:
+		if FeatureExtractor._check_informative(token['tag']):
+		    result.append('BUF_0_TAG_' + token['tag'])
+
+	    #BUF[0] L/R CHILDREN
+	    child = None
+	    if 'deps' in token:
+		child = token['deps']
+	    if child is not None:
+		index = token['address']
+		left_child = sum(1 for c in child if c < index)
+		right_child = sum(1 for c in child if c > index)
+		result.append('BUF_0_LCHILDREN_' + str(left_child))
+		result.append('BUF_0_RCHILDREN_' + str(right_child))
+
+	    #BUF[1] POSTAG
+	    if len(buffer) > 1:
+		buffer_idx1 = buffer[1]
+		token = tokens[buffer_idx1]
+		if FeatureExtractor._check_informative(token['word'], True):
+		    if 'word' in token:
+			result.append('BUF_1_FORM_' + token['word'])
+		if 'ctag' in token:
+		    if FeatureExtractor._check_informative(token['ctag']):
+			result.append('BUF_1_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+		if 'tag' in token: 
+		    if FeatureExtractor._check_informative(token['tag']):
+			result.append('BUF_1_TAG_' + token['tag'])
+
+	    #BUF[2] POSTAG
+	    if len(buffer) > 2:
+		buffer_idx2 = buffer[2]
+		token = tokens[buffer_idx2]
+		if 'ctag' in token:
+		    if FeatureExtractor._check_informative(token['ctag']):
+			result.append('BUF_2_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+		if 'tag' in token:
+		    if FeatureExtractor._check_informative(token['tag']):
+			result.append('BUF_2_TAG_' + token['tag'])
+
+	    #BUF[3] POSTAG
+	    if len(buffer) > 3:
+		buffer_idx3 = buffer[3]
+		token = tokens[buffer_idx3]
+		if 'ctag' in token:
+		    if FeatureExtractor._check_informative(token['ctag']):
+			result.append('BUF_3_CTAG_' + nltk.tag.mapping.map_tag("en-ptb", "universal", token['ctag']))
+		if 'tag' in token:
+		    if FeatureExtractor._check_informative(token['tag']):
+			result.append('BUF_3_TAG_' + token['tag'])
+	    
+	    #DISTANCE
+	    if stack and buffer:
+		buffer_idx0 = buffer[0]
+		stack_idx0 = stack[-1]
+		result.append('DISTANCE_' + str(buffer_idx0 - stack_idx0))
+        return result

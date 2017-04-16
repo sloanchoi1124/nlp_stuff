@@ -1,0 +1,37 @@
+from gensim.models import word2vec
+import numpy as np
+from os import path
+import json
+
+#open the json ile here
+file_path = path.relpath("data/hist_split.json")
+json_data = open(file_path).read()
+data = json.loads(json_data)
+
+sentences = []
+train_data = data['train']
+for question in train_data:
+    #question[0] is a list of all words in a question, question[1] is a word for the answer
+    sentence = []
+    for word_whole in question[0]:
+        #append the word; need to check if it's something valid... basically if is actually none then convert it to a string 'None'
+        if word_whole[0] is not None:
+            sentence.append(word_whole[0])
+        else:
+            sentence.append(u'None')
+    sentences.append(sentence)
+model = word2vec.Word2Vec(size = 100, window = 5, min_count = 1)
+model.build_vocab(sentences)
+alpha, min_alpha, passes = (0.025, 0.001, 20)
+alpha_delta = (alpha - min_alpha) / passes
+
+for epoch in range(passes):
+    model.alpha, model.min_alpha = alpha, alpha
+    model.train(sentences)
+
+    print('completed pass %i at alpha %f' % (epoch + 1, alpha))
+    alpha -= alpha_delta
+
+    np.random.shuffle(sentences)
+
+model.save("mymodel.model")

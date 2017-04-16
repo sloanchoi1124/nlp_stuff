@@ -1,0 +1,56 @@
+Part A:
+
+AER: IBMmodel1: 0.665
+AER: IBMmodel2: 0.650
+
+3) 
+For this sentence, IBM2 performs better. This is probably because 'Ich' and
+'Sie' are aligned to their uncommon meanings, therefore the probablity is low.
+But IBM2 also takes location information into account, and that (0-0, 2-0) are
+common, which helps IBM2 achieve a better alignment.
+
+[u'Ich', u'bitte', u'Sie', u',', u'sich', u'zu', u'einer', u'Schweigeminute',u'zu', u'erheben', u'.']
+[u'Please', u'rise', u',', u'then', u',', u'for', u'this', u'minute', u"'",u's', u'silence', u'.']
+IBM1 0-1 1-1 2-1 3-4 4-10 5-10 6-10 7-10 8-10 9-1
+IBM2 0-0 1-1 2-0 3-2 4-10 5-10 6-10 7-7 8-10 9-0
+
+4)
+The IBM1 performs best with 4 iterations, and IBM2 performs best with 6
+iterations.
+After 4 and 6 iterations, the accuracy for IBM1 and IBM2 increases a bit, and
+then tend to converge at around 0.665/0.650
+
+#of iterations				IBM1			IBM2
+2					0.684			0.644
+3					0.641			0.644
+4					0.630			0.642
+5					0.627			0.644
+6  					0.626			0.647
+7					0.629			0.646
+8					0.631			0.649
+9					0.628			0.649
+10					0.665			0.650
+12					0.666			0.650
+15					0.665			0.650
+
+Part B:
+4)
+average AER: 0.545
+
+5)
+example:
+[u'All', u'dies', u'entspricht', u'den', u'Grunds\xe4tzen', u',', u'die',
+u'wir', u'stets', u'verteidigt', u'haben', u'.']
+[u'This', u'is', u'all', u'in', u'accordance', u'with', u'the', u'principles',
+u'that', u'we', u'have', u'always', u'upheld', u'.']
+
+IBMModel2:
+0-12 1-4 2-7 3-4 4-12 5-10 6-10 7-9 8-7 9-12 10-7
+Berkeley Aligner:
+0-0 1-1 2-2 3-6 4-11 5-3 6-6 7-9 8-7 9-12 10-10 11-13
+
+The 3rd,6th, 7th word's alignment from the source indicates better performance.
+
+
+6)
+average AER: 0.542
